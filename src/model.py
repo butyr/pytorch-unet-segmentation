@@ -1,10 +1,8 @@
 import torch
 from layer import DownSample, UpSample, OutConv, ConvBlock
 import pytorch_lightning as pl
-import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import numpy as np
-import cv2
 
 
 class UNet(pl.LightningModule):
@@ -41,7 +39,9 @@ class UNet(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-        return optimizer
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.999, min_lr=1e-8)
+
+        return {'optimizer': optimizer, 'scheduler': scheduler}
 
     def training_step(self, train_batch, batch_idx):
         x, y = train_batch

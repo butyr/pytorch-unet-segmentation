@@ -11,8 +11,8 @@ def train():
         img_size=512,
     )
     train_data, val_data = random_split(dataset, [800, 204])
-    train_loader = DataLoader(train_data, batch_size=8, num_workers=16)
-    val_loader = DataLoader(val_data, batch_size=8, num_workers=16)
+    train_loader = DataLoader(train_data, batch_size=6, num_workers=10)
+    val_loader = DataLoader(val_data, batch_size=6, num_workers=10)
 
     n_classes = 4
     model = UNet(3, n_classes).to('cuda')

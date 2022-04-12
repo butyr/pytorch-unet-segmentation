@@ -1,5 +1,6 @@
 # pytorch-unet-segmentation
 
+This project offers a pytorch implementation of the [UNet](https://arxiv.org/pdf/1505.04597.pdf) architecture for image segmentation. 
+To train your own model download the [dataset](https://github.com/bearpaw/clothing-co-parsing) and update the data path in trainer.py.
 
-model = https://arxiv.org/pdf/1505.04597.pdf
-dataset = https://www.kaggle.com/c/imaterialist-fashion-2019-FGVC6/
+![alt text](results/result0.gif)
