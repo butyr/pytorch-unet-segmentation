@@ -26,12 +26,13 @@ class FashionDataset(Dataset):
     def __getitem__(self, idx):
         label_file = self.label_files[idx]
         label = scipy.io.loadmat(os.path.join(self.label_dir, label_file))['groundtruth']
+        label = self.reduce_classes(label)
 
         img_path = os.path.join(self.img_dir, f"{label_file.split('.')[0]}.jpg")
         image = cv2.imread(img_path)
 
-        label = self.resize(label, self.img_size, image.shape[1:])
-        image = self.resize(image, self.img_size, image.shape[1:])
+        label = self.resize(label, self.img_size, image.shape[:-1])
+        image = self.resize(image, self.img_size, image.shape[:-1])
 
         label = torch.tensor(label, dtype=torch.long)
         image = torch.tensor(image, dtype=torch.float32)
@@ -40,9 +41,19 @@ class FashionDataset(Dataset):
         return image, label
 
     @staticmethod
+    def reduce_classes(label):
+        label = np.where(label == 1, np.ones_like(label) * 3, label)
+        label = np.where(label == 2, np.ones_like(label) * 3, label)
+        label = np.where(label == 41, np.ones_like(label), label)
+        label = np.where(label == 19, np.ones_like(label) * 2, label)
+        label = np.where(label > 2, np.ones_like(label) * 3, label)
+
+        return label
+
+    @staticmethod
     def resize(img, img_size, img_shape):
         img = Image.fromarray(img)
-        width, height = img_shape
+        height, width = img_shape
 
         if width > height:
             padding = Pad((0, 0, 0, width-height))

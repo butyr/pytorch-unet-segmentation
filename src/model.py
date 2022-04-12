@@ -45,6 +45,14 @@ class UNet(pl.LightningModule):
         x, y = val_batch
         x_hat = self.forward(x)
         loss = F.cross_entropy(x_hat, y)
-        self.log('train_loss', loss)
+        self.log('val_loss', loss)
+
+        if batch_idx == 0:
+            img = torch.argmax(x_hat, dim=1, keepdim=True)
+            img = img.repeat(1, 3, 1, 1).cpu().detach().numpy()
+            tensorboard = self.logger.experiment
+
+            for i in range(img.shape[0]):
+                tensorboard.add_image(f"samples_{i}", img[i])
 
         return loss
