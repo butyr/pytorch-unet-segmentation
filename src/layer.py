@@ -1,23 +1,19 @@
 import torch
-from torch.nn import (
-    Conv2d,
-    ReLU,
-    MaxPool2d,
-    Sequential,
-    Upsample,
-    functional as F,
-)
+from torch import nn
+from torch.nn import functional as F
 
 
 class ConvBlock(torch.nn.Module):
 
-    def __init__(self, in_channel, out_channel):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.conv_block = Sequential(
-            Conv2d(in_channel, out_channel, 3, stride=1, padding=1, bias=False),
-            ReLU(),
-            Conv2d(out_channel, out_channel, 3, stride=1, padding=1, bias=False),
-            ReLU(),
+        self.conv_block = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, 3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(),
+            nn.Conv2d(out_channels, out_channels, 3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(),
         )
 
     def forward(self, inputs):
@@ -28,8 +24,8 @@ class DownSample(torch.nn.Module):
 
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.down_step = Sequential(
-            MaxPool2d(2, 2),
+        self.down_step = nn.Sequential(
+            nn.MaxPool2d(2, 2),
             ConvBlock(in_channels, out_channels)
         )
 
@@ -41,9 +37,9 @@ class UpSample(torch.nn.Module):
 
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.upsample_step = Sequential(
-            Upsample(scale_factor=2, mode='bilinear', align_corners=True),
-            Conv2d(in_channels, out_channels, 2, stride=1),
+        self.upsample_step = nn.Sequential(
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
+            nn.Conv2d(in_channels, out_channels, 2, stride=1),
         )
         self.conv_block = ConvBlock(in_channels, out_channels)
 
@@ -69,7 +65,7 @@ class OutConv(torch.nn.Module):
 
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.out_path = Conv2d(in_channels, out_channels, 1, stride=1)
+        self.out_path = nn.Conv2d(in_channels, out_channels, 1, stride=1)
 
     def forward(self, inputs):
         return self.out_path(inputs)
