@@ -1,33 +1,55 @@
 import os
-import pandas as pd
-from torchvision.io import read_image
-import torch
 from torch.utils.data import Dataset
-from torchvision import datasets
-from torchvision.transforms import ToTensor
-import matplotlib.pyplot as plt
+import scipy.io
+import torch
+import numpy as np
+from torchvision.transforms import Pad
+import cv2
+from PIL import Image
 
 
-class FashionFGVC6(Dataset):
-    def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
-        self.img_labels = pd.read_csv(annotations_file)
-        self.img_dir = img_dir
-        self.transform = transform
-        self.target_transform = target_transform
+class FashionDataset(Dataset):
+    def __init__(
+            self,
+            root_dir,
+            img_size,
+    ):
+        self.img_size = img_size
+        self.img_dir = os.path.join(root_dir, 'photos')
+        self.label_dir = os.path.join(root_dir, 'annotations/pixel-level')
+
+        self.label_files = os.listdir(self.label_dir)
 
     def __len__(self):
-        return len(self.img_labels)
+        return len(self.label_files)
 
     def __getitem__(self, idx):
-        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
-        image = read_image(img_path)
-        label = self.img_labels.iloc[idx, 1]
-        if self.transform:
-            image = self.transform(image)
-        if self.target_transform:
-            label = self.target_transform(label)
+        label_file = self.label_files[idx]
+        label = scipy.io.loadmat(os.path.join(self.label_dir, label_file))['groundtruth']
+
+        img_path = os.path.join(self.img_dir, f"{label_file.split('.')[0]}.jpg")
+        image = cv2.imread(img_path)
+
+        label = self.resize(label, self.img_size, image.shape[1:])
+        image = self.resize(image, self.img_size, image.shape[1:])
+
+        label = torch.tensor(label, dtype=torch.long)
+        image = torch.tensor(image, dtype=torch.float32)
+        image = image.permute(2, 0, 1)
+
         return image, label
 
+    @staticmethod
+    def resize(img, img_size, img_shape):
+        img = Image.fromarray(img)
+        width, height = img_shape
 
-if __name__ == "__main__":
-    dataset = FashionFGVC6()
+        if width > height:
+            padding = Pad((0, 0, 0, width-height))
+        else:
+            padding = Pad((0, 0, height-width, 0))
+
+        padded_img = padding(img)
+        resized_img = cv2.resize(np.array(padded_img), (img_size, img_size), interpolation=cv2.INTER_AREA)
+
+        return resized_img
