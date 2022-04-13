@@ -44,13 +44,20 @@ class UNet(pl.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.999, min_lr=1e-8)
 
-        return {'optimizer': optimizer, 'scheduler': scheduler}
+        # return {'optimizer': optimizer, 'scheduler': scheduler}
+        return optimizer
 
     def training_step(self, train_batch, batch_idx):
         x, y = train_batch
         x_hat = self.forward(x)
         loss = self.criterion(x_hat, y)
         self.log('train_loss', loss)
+
+        if batch_idx == 0:
+            tensorboard = self.logger.experiment
+
+            for i in range(x.shape[0]):
+                tensorboard.add_image(f"train/sample_{i}_input", x[i], global_step=self.global_step)
 
         return loss
 
@@ -71,8 +78,12 @@ class UNet(pl.LightningModule):
                 img_i = cm(np.squeeze(img[i]))
                 img_i = img_i.transpose(2, 0, 1)
 
-                tensorboard.add_image(f"samples_{i}", img_i, global_step=self.global_step)
-                tensorboard.add_image(f"inputs_{i}", x[i], global_step=self.global_step)
+                target_i = cm(np.squeeze(y[i].cpu().detach().numpy()))
+                target_i = target_i.transpose(2, 0, 1)
+
+                tensorboard.add_image(f"val/sample_{i}_prediction", img_i, global_step=self.global_step)
+                tensorboard.add_image(f"val/sample_{i}_input", x[i], global_step=self.global_step)
+                tensorboard.add_image(f"val/sample_{i}_target", target_i, global_step=self.global_step)
 
         return loss
 

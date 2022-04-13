@@ -14,16 +14,14 @@ class FashionDataset(Dataset):
             self,
             root_dir,
             img_size,
-            transform_images=None,
-            transform_labels=None,
+            transforms=None,
     ):
         self.img_size = img_size
         self.img_dir = os.path.join(root_dir, 'photos')
         self.label_dir = os.path.join(root_dir, 'annotations/pixel-level')
 
         self.label_files = os.listdir(self.label_dir)
-        self.transform_images = transform_images
-        self.transform_labels = transform_labels
+        self.transforms = transforms
 
     def __len__(self):
         return len(self.label_files)
@@ -38,9 +36,12 @@ class FashionDataset(Dataset):
 
         label = self.pad(label, image.shape[:-1])
         image = self.pad(image, image.shape[:-1])
-        label = self.transform_labels(label)
-        image = self.transform_images(image)
 
+        image, label = np.array(image), np.array(label)
+        transformed = self.transforms(image=image, mask=label)
+        image, label = transformed['image'], transformed['mask']
+
+        image = torch.as_tensor(np.array(image), dtype=torch.float32)
         label = torch.as_tensor(np.array(label), dtype=torch.int64).reshape(self.img_size, self.img_size)
 
         return image, label
