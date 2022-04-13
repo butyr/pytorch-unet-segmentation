@@ -3,6 +3,9 @@ from layer import DownSample, UpSample, OutConv, ConvBlock
 import pytorch_lightning as pl
 import matplotlib.pyplot as plt
 import numpy as np
+from torchvision.transforms import Pad
+import cv2
+from PIL import Image
 
 
 class UNet(pl.LightningModule):
@@ -71,3 +74,31 @@ class UNet(pl.LightningModule):
                 tensorboard.add_image(f"samples_{i}", img_i, global_step=self.global_step)
 
         return loss
+
+    def predict(self, img):
+        resized_image = self.resize(img, 512, img.shape[1:])
+        image = np.expand_dims(np.array(resized_image), axis=0)
+        image = torch.tensor(image, dtype=torch.float32)
+        image = image.permute(0, 3, 1, 2)
+
+        out = self.forward(image.to('cuda'))
+        out = torch.argmax(out, dim=1, keepdim=True)
+        out = out.permute(0, 2, 3, 1)
+        out = out.cpu().detach().numpy()
+
+        return out
+
+    @staticmethod
+    def resize(img, img_size, img_shape):
+        img = Image.fromarray(img)
+        height, width = img_shape
+
+        if width > height:
+            padding = Pad((0, 0, 0, width - height))
+        else:
+            padding = Pad((0, 0, height - width, 0))
+
+        padded_img = padding(img)
+        resized_img = cv2.resize(np.array(padded_img), (img_size, img_size), interpolation=cv2.INTER_AREA)
+
+        return resized_img
