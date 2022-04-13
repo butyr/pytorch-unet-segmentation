@@ -72,6 +72,7 @@ class UNet(pl.LightningModule):
                 img_i = img_i.transpose(2, 0, 1)
 
                 tensorboard.add_image(f"samples_{i}", img_i, global_step=self.global_step)
+                tensorboard.add_image(f"inputs_{i}", x[i], global_step=self.global_step)
 
         return loss
 

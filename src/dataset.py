@@ -6,6 +6,7 @@ import numpy as np
 from torchvision.transforms import Pad
 import cv2
 from PIL import Image
+import torch.nn.functional as F
 
 
 class FashionDataset(Dataset):
@@ -13,12 +14,16 @@ class FashionDataset(Dataset):
             self,
             root_dir,
             img_size,
+            transform_images=None,
+            transform_labels=None,
     ):
         self.img_size = img_size
         self.img_dir = os.path.join(root_dir, 'photos')
         self.label_dir = os.path.join(root_dir, 'annotations/pixel-level')
 
         self.label_files = os.listdir(self.label_dir)
+        self.transform_images = transform_images
+        self.transform_labels = transform_labels
 
     def __len__(self):
         return len(self.label_files)
@@ -31,12 +36,12 @@ class FashionDataset(Dataset):
         img_path = os.path.join(self.img_dir, f"{label_file.split('.')[0]}.jpg")
         image = cv2.imread(img_path)
 
-        label = self.resize(label, self.img_size, image.shape[:-1])
-        image = self.resize(image, self.img_size, image.shape[:-1])
+        label = self.pad(label, image.shape[:-1])
+        image = self.pad(image, image.shape[:-1])
+        label = self.transform_labels(label)
+        image = self.transform_images(image)
 
-        label = torch.tensor(label, dtype=torch.long)
-        image = torch.tensor(image, dtype=torch.float32)
-        image = image.permute(2, 0, 1)
+        label = torch.as_tensor(np.array(label), dtype=torch.int64).reshape(self.img_size, self.img_size)
 
         return image, label
 
@@ -51,7 +56,7 @@ class FashionDataset(Dataset):
         return label
 
     @staticmethod
-    def resize(img, img_size, img_shape):
+    def pad(img, img_shape):
         img = Image.fromarray(img)
         height, width = img_shape
 
@@ -61,6 +66,5 @@ class FashionDataset(Dataset):
             padding = Pad((0, 0, height-width, 0))
 
         padded_img = padding(img)
-        resized_img = cv2.resize(np.array(padded_img), (img_size, img_size), interpolation=cv2.INTER_AREA)
 
-        return resized_img
+        return padded_img
